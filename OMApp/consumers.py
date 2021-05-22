@@ -9,7 +9,6 @@ class OrderProgress(WebsocketConsumer):
         self.room_name = order_id.replace(" ","_")
         self.room_name = self.room_name.replace(":","_")
         self.room_group_name = 'order_%s' % self.room_name
-        print(self.room_group_name)
         
         async_to_sync(self.channel_layer.group_add)(
             self.room_group_name,
@@ -31,9 +30,8 @@ class OrderProgress(WebsocketConsumer):
 
     # Receive message from WebSocket
     def receive(self, text_data):
-        
-
         # Send message to room group
+        print(text_data)
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
             {
@@ -45,6 +43,7 @@ class OrderProgress(WebsocketConsumer):
     # Receive message from room group
     def order_status(self, event):
         print(event)
+        print("Order Status Changed")
         data = json.loads(event['value'])
         # Send message to WebSocket
         self.send(text_data=json.dumps({

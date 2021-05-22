@@ -163,7 +163,6 @@ def inventory_list(request):
 # def deliveryAgent_list(request):
 
 def order(request , order_id):
-    print(order_id + "am in order view")
     order = OrderDetails.objects.filter(Order_Number=order_id).first()
     if order is None:
         return redirect('/')

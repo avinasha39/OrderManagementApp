@@ -40,8 +40,10 @@
     var status_html = document.querySelector('#status')
    
     if(value == 100){
-      console.log("ss")
       progress.classList.add('bg-success')
+    }
+    else{
+      progress.classList.remove('bg-success')
     }
 
     status_html.innerHTML  = status
