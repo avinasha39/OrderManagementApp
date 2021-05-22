@@ -5,13 +5,15 @@ import datetime
 
 
 def increment_order_id():
-    todayDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-    today_order_list = OrderDetails.objects.filter( Placed_Time = todayDate)
+    todayDate = datetime.datetime.now().date()
+    today_order_list = OrderDetails.objects.filter( Placed_Time__year=todayDate.year,
+                                                    Placed_Time__month=todayDate.month,
+                                                    Placed_Time__day=todayDate.day)
     print(today_order_list)
     if today_order_list == None or today_order_list.count() == 0:
-        return todayDate+'_'+'1'
+        return datetime.datetime.now().strftime("%Y-%m-%d")+'_'+'1'
 
-    return todayDate+'_'+ str(today_order_list.count() +1)
+    return datetime.datetime.now().strftime("%Y-%m-%d")+'_'+ str(today_order_list.count() +1)
 
 
 class Inventory(models.Model):
@@ -43,7 +45,7 @@ class OrderDetails(models.Model):
 
     Order_Number = models.CharField(primary_key=True, 
                                     max_length=20, default=increment_order_id, editable=False)                                
-    Placed_Time = models.DateTimeField(default= datetime.datetime.now())
+    Placed_Time = models.DateTimeField(default= datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     Customer_name = models.CharField(max_length=20)
     Customer_add = models.TextField()
     Delivery_Distance = models.FloatField(
