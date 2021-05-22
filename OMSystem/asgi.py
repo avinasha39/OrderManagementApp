@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'OMSystem.settings')
 application = get_asgi_application()
 
 ws_pattern= [
-    path('ws/orders/<order_id>', OrderProgress),
+    path('ws/orders/<order_id>', OrderProgress.as_asgi()),
 ]
 
 application= ProtocolTypeRouter(

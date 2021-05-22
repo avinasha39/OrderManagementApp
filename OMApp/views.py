@@ -1,6 +1,7 @@
 import json
 import datetime
-
+from django.shortcuts import render, redirect
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import status
 
@@ -160,3 +161,12 @@ def inventory_list(request):
 
 
 # def deliveryAgent_list(request):
+
+def order(request , order_id):
+    print(order_id + "am in order view")
+    order = OrderDetails.objects.filter(Order_Number=order_id).first()
+    if order is None:
+        return redirect('/')
+    
+    context = {'order' : order}
+    return render(request , 'order.html', context)

@@ -19,7 +19,7 @@ from django.conf.urls import url, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    url(r'^', include('OMApp.urls'))
+    path('api/', include('OMApp.urls'))
 ]
 
 # from django.conf.urls import 

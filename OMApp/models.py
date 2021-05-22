@@ -56,6 +56,26 @@ class OrderDetails(models.Model):
     DeliveryTeam = models.ForeignKey(DeliveryTeam, on_delete=models.DO_NOTHING, null=True)
     Status = models.CharField(
         max_length=20,  choices=DeliveryStatusEnum.choices, default=DeliveryStatusEnum.PLACED)
+    
+    @staticmethod
+    def give_order_details(order_id):
+        instance = OrderDetails.objects.filter(Order_Number=order_id).first()
+        data  = {}
+        data['order_id'] = instance.Order_Number
+        data['amount'] = str(instance.Total_Amount)
+        data['status'] = instance.get_Status_display()
+        data['date'] = str(instance.Placed_Time)
+        progress_percentage = 20
+        if instance.Status == 'PLACED':
+            progress_percentage = 20
+        elif instance.Status == 'INTRANSIT':
+            progress_percentage = 60
+        elif instance.Status == 'COMPLETED':
+            progress_percentage = 100
+            
+        data['progress'] = progress_percentage
+        print(data)
+        return data
 
 
 class OrderItems(models.Model):
