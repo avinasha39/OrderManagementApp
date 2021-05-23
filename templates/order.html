@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block start %}
-
+{% load static %}
 
 
 <div class="container mt-5 pt-5">
   <h3>Order id - {{order.Order_Number}}</h3>
   <h5>Time Of Delivery - {{order.Estimated_Delivery_Time}}</h5>
   <p>Amount - ₹ {{order.Total_Amount}}</p>
+  <img src="{% static "images/placed.png" %}" id="order_status" alt="order status" style="width:128px;height:128px;">
   <span class="badge badge-primary" id="status">Primary</span>
   <div class="progress mt-4">
     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="50"
@@ -39,11 +40,17 @@
    
     var progress = document.querySelector('.progress-bar')
     var status_html = document.querySelector('#status')
+    var order_status_pic = document.getElementById('order_status');
    
     if(value == 100){
       progress.classList.add('bg-success')
+      order_status_pic.src = "{% static "images/delivered.png" %}";
     }
     else{
+      if( value == 60)
+        order_status_pic.src = "{% static "images/delivering.png" %}";
+      else
+        order_status_pic.src = "{% static "images/placed.png" %}";
       progress.classList.remove('bg-success')
     }
 
