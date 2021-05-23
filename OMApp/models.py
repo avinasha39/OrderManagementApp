@@ -2,6 +2,11 @@ from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 import datetime
+from channels.layers import get_channel_layer
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from asgiref.sync import async_to_sync
+import json
 
 
 def increment_order_id():
@@ -9,7 +14,7 @@ def increment_order_id():
     today_order_list = OrderDetails.objects.filter( Placed_Time__year=todayDate.year,
                                                     Placed_Time__month=todayDate.month,
                                                     Placed_Time__day=todayDate.day)
-    print(today_order_list)
+    #print(today_order_list)
     if today_order_list == None or today_order_list.count() == 0:
         return datetime.datetime.now().strftime("%Y-%m-%d")+'_'+'1'
 
@@ -37,6 +42,8 @@ class DeliveryTeam(models.Model):
 
 class OrderDetails(models.Model):
 
+    order_queue = []
+
     class DeliveryStatusEnum(models.TextChoices):
         PLACED = 'PL', _('PLACED')
         INTRANSIT = 'IN', _('INTRANSIT')
@@ -56,6 +63,55 @@ class OrderDetails(models.Model):
     DeliveryTeam = models.ForeignKey(DeliveryTeam, on_delete=models.DO_NOTHING, null=True)
     Status = models.CharField(
         max_length=20,  choices=DeliveryStatusEnum.choices, default=DeliveryStatusEnum.PLACED)
+    
+    @staticmethod
+    def give_order_details(order_id):
+        instance = OrderDetails.objects.filter(Order_Number=order_id).first()
+        status = instance.get_Status_display()
+        data  = {}
+        data['order_id'] = instance.Order_Number
+        data['amount'] = str(instance.Total_Amount)
+        data['status'] = status
+        data['date'] = str(instance.Placed_Time)
+        progress_percentage = 20
+        if status == 'PLACED':
+            progress_percentage = 20
+        elif status == 'INTRANSIT':
+            progress_percentage = 60
+        elif status == 'COMPLETED':
+            progress_percentage = 100
+            
+        data['progress'] = progress_percentage
+        return data
+
+@receiver(post_save, sender=OrderDetails)
+def order_status_handler(sender, instance,created , **kwargs):
+    
+    if not created:
+        print("######## Receiver ###########")
+        channel_layer = get_channel_layer()
+        data  = {}
+        status = instance.get_Status_display()
+        data['order_id'] = instance.Order_Number
+        data['amount'] = str(instance.Total_Amount)
+        data['status'] = status
+        data['date'] = str(instance.Placed_Time)
+        progress_percentage = 20
+        if status == 'PLACED':
+            progress_percentage = 20
+        elif status == 'INTRANSIT':
+            progress_percentage = 60
+        elif status == 'COMPLETED':
+            progress_percentage = 100
+    
+        data['progress'] = progress_percentage
+        print(data)
+        async_to_sync(channel_layer.group_send)(
+            'order_%s' % instance.Order_Number,{
+                'type': 'order_status',
+                'value': json.dumps(data)
+            }
+        )
 
 
 class OrderItems(models.Model):
