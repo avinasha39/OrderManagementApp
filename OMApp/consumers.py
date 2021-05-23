@@ -5,16 +5,14 @@ from .models import *
 
 class OrderProgress(WebsocketConsumer):
     def connect(self):
-        order_id = self.scope['url_route']['kwargs']['order_id']
-        self.room_name = order_id.replace(" ","_")
-        self.room_name = self.room_name.replace(":","_")
+        self.room_name = self.scope['url_route']['kwargs']['order_id']
         self.room_group_name = 'order_%s' % self.room_name
         
         async_to_sync(self.channel_layer.group_add)(
             self.room_group_name,
             self.channel_name
         )
-        order = OrderDetails.give_order_details(order_id)
+        order = OrderDetails.give_order_details(self.room_name)
         self.accept()
         
         self.send(text_data=json.dumps({

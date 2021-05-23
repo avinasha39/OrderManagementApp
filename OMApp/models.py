@@ -14,7 +14,7 @@ def increment_order_id():
     today_order_list = OrderDetails.objects.filter( Placed_Time__year=todayDate.year,
                                                     Placed_Time__month=todayDate.month,
                                                     Placed_Time__day=todayDate.day)
-    print(today_order_list)
+    #print(today_order_list)
     if today_order_list == None or today_order_list.count() == 0:
         return datetime.datetime.now().strftime("%Y-%m-%d")+'_'+'1'
 
@@ -41,6 +41,8 @@ class DeliveryTeam(models.Model):
 
 
 class OrderDetails(models.Model):
+
+    order_queue = []
 
     class DeliveryStatusEnum(models.TextChoices):
         PLACED = 'PL', _('PLACED')
@@ -102,13 +104,10 @@ def order_status_handler(sender, instance,created , **kwargs):
         elif status == 'COMPLETED':
             progress_percentage = 100
     
-        room_name = instance.Order_Number.replace(" ","_")
-        room_name = room_name.replace(":","_")
         data['progress'] = progress_percentage
-        print(room_name)
         print(data)
         async_to_sync(channel_layer.group_send)(
-            'order_%s' % room_name,{
+            'order_%s' % instance.Order_Number,{
                 'type': 'order_status',
                 'value': json.dumps(data)
             }

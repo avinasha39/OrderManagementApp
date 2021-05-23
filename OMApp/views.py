@@ -38,6 +38,12 @@ def order_list(request):
             order1 = orderDetailsSerializer.save()
             print("Ordered Saved")
             amount = SaveOrderItem(orders_data, order1)
+
+            #push order to the queue
+            if(deliveryTeam == None and deliveryStatus == None):
+                OrderDetails.order_queue.append(order1.pk)
+                print("order queue")
+                print(OrderDetails.order_queue)
             
             #Incase order item contains any item count which is not present in inventory
             if(amount == -1):
@@ -124,6 +130,7 @@ def process_order(order):
 
     else:
         agent = DeliveryTeam.objects.order_by('Next_Activate_Time')
+        delivery_team_id = agent[0].pk
 
         estimated_delivey_time = get_estimated_delivery_time(
             additionalTimeInMinForDelivery)
@@ -131,10 +138,10 @@ def process_order(order):
         estimated_next_free_time = get_estimated_next_free_time(
             estimated_delivey_time, additionalTimeToReturn)
 
-        DeliveryTeam.objects.filter(pk=agent[0].pk).update(
+        DeliveryTeam.objects.filter(pk=delivery_team_id).update(
             Status=DeliveryTeam.DeliveryTeamStatus.DELIVERING, Next_Activate_Time=estimated_next_free_time)
 
-        return estimated_delivey_time, delivery_agent[0].pk, OrderDetails.DeliveryStatusEnum.INTRANSIT
+        return estimated_delivey_time, delivery_team_id, OrderDetails.DeliveryStatusEnum.INTRANSIT
 
 
 def get_estimated_delivery_time(additionalTimeInMinForDelivery):
@@ -169,3 +176,37 @@ def order(request , order_id):
     
     context = {'order' : order}
     return render(request , 'order.html', context)
+
+@api_view(['PATCH'])
+def order_delivered(request, delivery_team_id):
+    delivery_team = DeliveryTeam.objects.get(pk=delivery_team_id)
+    delivery_order = delivery_team.orderdetails_set.first()
+    print(delivery_order)
+    if delivery_order == None:
+        return Response(data= "No Orders",status=status.HTTP_200_OK)
+
+    #update the previous order
+    OrderDetails.objects.filter(Order_Number=delivery_order.pk).update(Status=OrderDetails.DeliveryStatusEnum.COMPLETED)
+    previous_order = OrderDetails.objects.get(pk=delivery_order.pk)
+    previous_order.save() 
+    delivery_team.orderdetails_set.clear()
+
+    #get the next from queue
+    order_queue = OrderDetails.order_queue
+
+    if len(order_queue) == 0:
+        DeliveryTeam.objects.filter(pk=delivery_team.pk).update(Status=DeliveryTeam.DeliveryTeamStatus.FREE)
+        return Response(data= "Order Delivered, Nothing to Deliver",status=status.HTTP_200_OK)
+    else:
+        next_order_pk = OrderDetails.order_queue[0]
+        print(next_order_pk)
+        OrderDetails.order_queue.pop(0)
+
+        print("current order queue status")
+        print(OrderDetails.order_queue)
+
+        #update the next order
+        OrderDetails.objects.filter(Order_Number=next_order_pk).update(DeliveryTeam=delivery_team.pk, Status=OrderDetails.DeliveryStatusEnum.INTRANSIT)
+        next_order = OrderDetails.objects.get(pk=next_order_pk)
+        next_order.save()      
+        return Response(data= "Order Delivered, New Order in Delivery",status=status.HTTP_200_OK)
